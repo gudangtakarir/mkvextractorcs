@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Web gMKVExtractGUI</title>
+    <title>Web gMKVExtractGUI (Fixed)</title>
     
-    <!-- Library Eksternal (Parser Matroska & Pembuat ZIP) -->
+    <!-- Library Eksternal -->
     <script src="https://cdn.jsdelivr.net/npm/matroska-subtitles@3.x/dist/matroska-subtitles.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
     <style>
-        /* === Variabel Warna & Tema (Dark Theme ala gMKVExtractGUI) === */
         :root {
             --bg-body: #141417;
             --bg-card: #1e1e24;
@@ -39,7 +38,7 @@
 
         .app-container {
             width: 100%;
-            max-width: 900px;
+            max-width: 920px;
             background: var(--bg-card);
             border: 1px solid var(--border);
             border-radius: 12px;
@@ -50,7 +49,6 @@
         header h2 { font-size: 1.6rem; margin-bottom: 4px; }
         header p { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px; }
 
-        /* === Toolbar & Tombol Aksi === */
         .toolbar {
             display: flex;
             flex-wrap: wrap;
@@ -78,7 +76,6 @@
         .btn-primary:hover { background-color: var(--accent-hover); }
         .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        /* Input file transparan agar Android memanggil DocumentsUI tanpa filter ketat */
         .file-input-wrapper {
             position: relative;
             overflow: hidden;
@@ -91,7 +88,6 @@
             cursor: pointer;
         }
 
-        /* === Dropdown Menu (Untuk Mobile / Tombol Atas) === */
         .dropdown { position: relative; }
         .dropdown-menu {
             display: none;
@@ -100,7 +96,7 @@
             background: #25252e;
             border: 1px solid var(--border);
             border-radius: 8px;
-            min-width: 250px;
+            min-width: 260px;
             box-shadow: 0 8px 24px rgba(0,0,0,0.6);
             z-index: 100;
             margin-top: 5px;
@@ -118,7 +114,6 @@
         .dropdown-item:hover { background-color: var(--accent); color: white; }
         .dropdown-item:last-child { border-bottom: none; }
 
-        /* === Context Menu (Klik Kanan Khusus Desktop) === */
         #contextMenu {
             display: none;
             position: fixed;
@@ -130,7 +125,6 @@
             z-index: 999;
         }
 
-        /* === Status Counter Bar === */
         .status-bar {
             background: rgba(0,0,0,0.3);
             border: 1px solid var(--border);
@@ -144,7 +138,6 @@
             gap: 10px;
         }
 
-        /* === TreeView Container (Mirip gMKVExtractGUI) === */
         .tree-container {
             border: 1px solid var(--border);
             border-radius: 8px;
@@ -193,7 +186,6 @@
         .track-item input[type="checkbox"] { cursor: pointer; width: 16px; height: 16px; }
         .track-item input[type="checkbox"]:disabled { cursor: not-allowed; opacity: 0.3; }
 
-        /* Badge Warna Tipe Track */
         .type-badge {
             font-size: 0.7rem;
             font-weight: bold;
@@ -206,7 +198,6 @@
         .badge-sub { background: var(--badge-sub); color: black; }
         .badge-font { background: var(--badge-font); color: white; }
 
-        /* Log Box */
         .log-box {
             background: #000;
             border: 1px solid var(--border);
@@ -219,7 +210,6 @@
             color: #10b981;
         }
 
-        /* Responsif Mobile */
         @media (max-width: 600px) {
             .app-container { padding: 12px; }
             .toolbar { flex-direction: column; }
@@ -233,18 +223,15 @@
     <div class="app-container">
         <header>
             <h2>Web gMKVExtractGUI</h2>
-            <p>Pilih file MKV untuk memindai trek & lampiran font secara instan.</p>
+            <p>Pindai & ekstrak subtitle serta lampiran font secara batch langsung di browser.</p>
         </header>
 
-        <!-- Baris Tombol Atas -->
         <div class="toolbar">
             <div class="file-input-wrapper">
                 <button class="btn btn-primary">📁 Tambah File MKV...</button>
-                <!-- Dikosongkan atribut accept-nya agar Android membuka DocumentsUI dengan leluasa -->
                 <input type="file" id="filePicker" multiple />
             </div>
 
-            <!-- Dropdown Aksi Massal (Mobile & Desktop) -->
             <div class="dropdown">
                 <button class="btn" id="btnBatchSelect">⚡ Seleksi Cepat ▾</button>
                 <div class="dropdown-menu" id="quickSelectDropdown">
@@ -269,14 +256,12 @@
             <button class="btn" onclick="clearAllFiles()" style="margin-left: auto;">🗑️ Kosongkan</button>
         </div>
 
-        <!-- Status & Counter Akumulasi -->
         <div class="status-bar">
             <span>Total MKV: <b id="lblTotalFiles">0</b> File</span>
             <span>Subtitle Tercentang: <b id="lblSelectedSubs">0</b> / <span id="lblTotalSubs">0</span></span>
             <span>Font Tercentang: <b id="lblSelectedFonts">0</b> / <span id="lblTotalFonts">0</span></span>
         </div>
 
-        <!-- Wadah TreeView (Mendukung Klik Kanan) -->
         <div class="tree-container" id="treeView">
             <div style="text-align: center; color: var(--text-muted); margin-top: 90px;">
                 Belum ada file MKV yang diimpor. Klik tombol "Tambah File MKV..." di atas.
@@ -291,7 +276,6 @@
         <div class="log-box" id="logBox">Menunggu antrean...</div>
     </div>
 
-    <!-- Context Menu (Klik Kanan Khusus Layar Komputer) -->
     <div id="contextMenu">
         <div class="dropdown-item" onclick="applySelection('all-subs'); hideContextMenu();">
             <span>Centang Semua Subtitle</span>
@@ -308,8 +292,6 @@
     </div>
 
     <script>
-        // === STATE GLOBAL APLIKASI ===
-        // Menyimpan data semua file MKV yang berhasil di-probe
         let mkvDatabase = []; 
 
         const filePicker = document.getElementById('filePicker');
@@ -319,19 +301,13 @@
         const contextMenu = document.getElementById('contextMenu');
         const quickSelectDropdown = document.getElementById('quickSelectDropdown');
 
-        /**
-         * Fungsi logging ke terminal box visual
-         */
         function writeLog(msg) {
             const time = new Date().toLocaleTimeString();
             logBox.innerHTML += `<div>[${time}] ${msg}</div>`;
             logBox.scrollTop = logBox.scrollHeight;
         }
 
-        /**
-         * Format waktu milidetik ke centisecond standar ASS (H:MM:SS.cc)
-         * Contoh: 19120 ms -> "0:00:19.12"
-         */
+        // Format waktu untuk SubStation Alpha (.ass) -> H:MM:SS.cc
         function formatTimeASS(ms) {
             if (!ms || ms < 0) ms = 0;
             const totalSec = Math.floor(ms / 1000);
@@ -342,10 +318,9 @@
             return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(cs).padStart(2, '0')}`;
         }
 
-        /**
-         * Format waktu milidetik ke standar SRT (HH:MM:SS,mmm)
-         */
+        // Format waktu untuk SubRip (.srt) -> HH:MM:SS,mmm
         function formatTimeSRT(ms) {
+            if (!ms || ms < 0) ms = 0;
             let date = new Date(ms);
             let h = String(Math.floor(ms / 3600000)).padStart(2, '0');
             let m = String(date.getUTCMinutes()).padStart(2, '0');
@@ -354,25 +329,24 @@
             return `${h}:${m}:${s},${milli}`;
         }
 
-        // === PROSES INPUT & PROBING CEPAT (TAHAP 1) ===
         filePicker.addEventListener('change', async (e) => {
             const files = Array.from(e.target.files).filter(f => f.name.toLowerCase().endsWith('.mkv'));
             if (files.length === 0) return;
 
-            writeLog(`Mendeteksi ${files.length} file MKV. Memulai scanning cepat...`);
+            writeLog(`Mendeteksi ${files.length} file MKV. Memulai scanning...`);
 
             for (let i = 0; i < files.length; i++) {
-                writeLog(`Scanning metadata: ${files[i].name}...`);
+                writeLog(`Scanning (${i+1}/${files.length}): ${files[i].name}...`);
                 await probeMKV(files[i]);
             }
 
             renderTreeView();
             updateCounters();
-            filePicker.value = ''; // Reset input agar bisa pilih file ulang
+            filePicker.value = '';
         });
 
         /**
-         * Membaca informasi trek dan attachment dari MKV tanpa membebani RAM
+         * Scanning metadata MKV secara akurat tanpa limit 5MB sempit
          */
         function probeMKV(file) {
             return new Promise(async (resolve) => {
@@ -387,41 +361,50 @@
                     attachments: []
                 };
 
-                // Tangkap informasi track
+                let tracksParsed = false;
+
                 parser.once('tracks', (tracks) => {
+                    tracksParsed = true;
                     tracks.forEach(t => {
-                        const isSub = t.type === 'ass' || t.type === 'utf8' || t.type === 'subtitle' || (t.codec && t.codec.includes('S_TEXT'));
+                        const codec = (t.codec || '').toUpperCase();
+                        const type = (t.type || '').toLowerCase();
+                        
+                        // Perbaikan: deteksi format ASS / SSA / SRT dengan benar
+                        const isSub = type === 'ass' || type === 'ssa' || type === 'utf8' || type === 'subtitle' || codec.includes('S_TEXT') || codec.includes('ASS') || codec.includes('SSA');
                         
                         fileEntry.tracks.push({
                             number: t.number,
                             type: isSub ? 'subtitle' : (t.type || 'info'),
-                            codec: t.codec || (t.type === 'ass' ? 'S_TEXT/ASS' : 'UNKNOWN'),
+                            codec: t.codec || (isSub ? 'S_TEXT/ASS' : 'UNKNOWN'),
                             language: t.language || 'und',
                             header: t.header || '',
-                            isExtractable: isSub, // Hanya sub yang bisa dicentang untuk diekstrak
-                            checked: isSub // Otomatis dicentang secara default
+                            isExtractable: isSub,
+                            checked: isSub
                         });
                     });
                 });
 
-                // Tangkap attachment font yang berada di header awal
+                // Tangkap seluruh lampiran font
                 parser.on('file', (att) => {
-                    // Cek jika belum ada di database
-                    if (!fileEntry.attachments.some(a => a.filename === att.filename)) {
+                    const fn = att.filename || `attachment_${Date.now()}`;
+                    const isFont = /\.(ttf|otf|ttc|woff|woff2)$/i.test(fn) || (att.mimeType && att.mimeType.includes('font'));
+
+                    if (!fileEntry.attachments.some(a => a.filename === fn)) {
                         fileEntry.attachments.push({
-                            filename: att.filename,
+                            filename: fn,
                             mime: att.mimeType || 'font/ttf',
                             size: att.data ? att.data.byteLength : 0,
-                            checked: true // Default tercentang
+                            isFont: isFont,
+                            checked: isFont // Otomatis centang jika font
                         });
                     }
                 });
 
-                // Baca beberapa megabyte pertama untuk mendapatkan header/tracks secara instan
                 const stream = file.stream();
                 const reader = stream.getReader();
                 let bytesRead = 0;
-                const maxProbeBytes = 5 * 1024 * 1024; // Cukup 5MB awal untuk membaca metadata
+                // Batas dinaikkan jadi 60MB untuk menampung header pack font tebal tanpa membaca seluruh film
+                const maxProbeBytes = Math.min(60 * 1024 * 1024, file.size);
 
                 try {
                     while (bytesRead < maxProbeBytes) {
@@ -430,9 +413,9 @@
                         bytesRead += value.length;
                         parser.write(value);
                     }
-                    reader.cancel(); // Batalkan pembacaan agar hemat resource
+                    reader.cancel();
                 } catch (err) {
-                    // Abaikan stream cancellation
+                    // stream dibatalkan secara normal setelah probe selesai
                 }
 
                 mkvDatabase.push(fileEntry);
@@ -440,10 +423,6 @@
             });
         }
 
-        // === RENDER TREEVIEW KE LAYAR ===
-        /**
-         * Menggambar ulang struktur direktori treeview mirip gMKVExtractGUI
-         */
         function renderTreeView() {
             if (mkvDatabase.length === 0) {
                 treeView.innerHTML = `<div style="text-align: center; color: var(--text-muted); margin-top: 90px;">Belum ada file MKV yang diimpor.</div>`;
@@ -458,11 +437,9 @@
                 const fileBox = document.createElement('div');
                 fileBox.className = 'file-node';
 
-                // Hitung berapa item yang dicentang di file ini
                 const checkedCount = item.tracks.filter(t => t.checked).length + item.attachments.filter(a => a.checked).length;
                 const totalCount = item.tracks.filter(t => t.isExtractable).length + item.attachments.length;
 
-                // Template Header File
                 fileBox.innerHTML = `
                     <div class="file-header" onclick="toggleCollapse(this)">
                         <span class="toggle-icon">▼</span>
@@ -474,13 +451,12 @@
 
                 const trackListEl = fileBox.querySelector('.track-list');
 
-                // 1. Render Tracks (Video, Audio, Subtitle)
                 item.tracks.forEach((track, trackIdx) => {
                     const row = document.createElement('div');
                     row.className = 'track-item';
 
                     const badgeClass = track.type === 'subtitle' ? 'badge-sub' : (track.type.includes('audio') ? 'badge-audio' : 'badge-video');
-                    const badgeText = track.type === 'subtitle' ? 'Subtitles' : track.type;
+                    const badgeText = track.type === 'subtitle' ? 'Subtitle' : track.type;
 
                     row.innerHTML = `
                         <input type="checkbox" 
@@ -489,22 +465,22 @@
                             onchange="onTrackCheckChange(${fileIdx}, ${trackIdx}, this.checked)"
                         />
                         <span class="type-badge ${badgeClass}">${badgeText}</span>
-                        <span>Track ${track.number} [${track.codec}][${track.language}]</span>
+                        <span>Track ${track.number} [${track.codec}] [${track.language}]</span>
                     `;
                     trackListEl.appendChild(row);
                 });
 
-                // 2. Render Font Attachments
                 item.attachments.forEach((att, attIdx) => {
                     const row = document.createElement('div');
                     row.className = 'track-item';
+                    const sizeStr = att.size > 0 ? ` (${(att.size / 1024).toFixed(1)} KB)` : '';
                     row.innerHTML = `
                         <input type="checkbox" 
                             ${att.checked ? 'checked' : ''} 
                             onchange="onAttachmentCheckChange(${fileIdx}, ${attIdx}, this.checked)"
                         />
-                        <span class="type-badge badge-font">Attachment</span>
-                        <span>[${att.filename}] (${(att.size / 1024).toFixed(1)} KB)</span>
+                        <span class="type-badge badge-font">${att.isFont ? 'Font' : 'Attachment'}</span>
+                        <span>[${att.filename}]${sizeStr}</span>
                     `;
                     trackListEl.appendChild(row);
                 });
@@ -513,32 +489,20 @@
             });
         }
 
-        /**
-         * Membuka / Menutup node folder di TreeView
-         */
         function toggleCollapse(headerEl) {
             headerEl.classList.toggle('collapsed');
         }
 
-        /**
-         * Event saat checkbox track satuan diubah
-         */
         function onTrackCheckChange(fileIdx, trackIdx, isChecked) {
             mkvDatabase[fileIdx].tracks[trackIdx].checked = isChecked;
             updateCounters();
         }
 
-        /**
-         * Event saat checkbox attachment font satuan diubah
-         */
         function onAttachmentCheckChange(fileIdx, attIdx, isChecked) {
             mkvDatabase[fileIdx].attachments[attIdx].checked = isChecked;
             updateCounters();
         }
 
-        /**
-         * Menghitung akumulasi checkbox dan memperbarui badge status
-         */
         function updateCounters() {
             let totalSubs = 0, selectedSubs = 0;
             let totalFonts = 0, selectedFonts = 0;
@@ -554,7 +518,6 @@
                         fileTotal++;
                         if (t.checked) { selectedSubs++; fileChecked++; }
 
-                        // Khusus hitung Subtitle Bahasa Indonesia
                         if (t.language.toLowerCase() === 'ind' || t.language.toLowerCase() === 'id') {
                             indSubsTotal++;
                             if (t.checked) indSubsSelected++;
@@ -568,28 +531,21 @@
                     if (a.checked) { selectedFonts++; fileChecked++; }
                 });
 
-                // Update badge kecil per-file
                 const fileBadge = document.getElementById(`badge_file_${fileIdx}`);
                 if (fileBadge) fileBadge.innerText = `${fileChecked}/${fileTotal} Terpilih`;
             });
 
-            // Update label global
             document.getElementById('lblTotalFiles').innerText = mkvDatabase.length;
             document.getElementById('lblSelectedSubs').innerText = selectedSubs;
             document.getElementById('lblTotalSubs').innerText = totalSubs;
             document.getElementById('lblSelectedFonts').innerText = selectedFonts;
             document.getElementById('lblTotalFonts').innerText = totalFonts;
 
-            // Update badge di dalam menu dropdown
             document.getElementById('badgeAllSubs').innerText = `${selectedSubs}/${totalSubs}`;
             document.getElementById('badgeIndSubs').innerText = `${indSubsSelected}/${indSubsTotal}`;
             document.getElementById('badgeAllFonts').innerText = `${selectedFonts}/${totalFonts}`;
         }
 
-        // === FITUR CHECKBOX MASSAL (DROPDOWN & KLIK KANAN) ===
-        /**
-         * Menerapkan filter centang massal
-         */
         function applySelection(mode) {
             mkvDatabase.forEach(file => {
                 file.tracks.forEach(t => {
@@ -610,9 +566,6 @@
             quickSelectDropdown.classList.remove('show');
         }
 
-        /**
-         * Reset seluruh daftar file
-         */
         function clearAllFiles() {
             mkvDatabase = [];
             renderTreeView();
@@ -620,13 +573,11 @@
             writeLog("Seluruh antrean dikosongkan.");
         }
 
-        // === DROPDOWN & CONTEXT MENU LISTENERS ===
         document.getElementById('btnBatchSelect').addEventListener('click', (e) => {
             e.stopPropagation();
             quickSelectDropdown.classList.toggle('show');
         });
 
-        // Tampilkan context menu saat klik kanan di area treeview (Desktop)
         treeView.addEventListener('contextmenu', (e) => {
             e.preventDefault();
             contextMenu.style.top = `${e.clientY}px`;
@@ -634,7 +585,6 @@
             contextMenu.style.display = 'block';
         });
 
-        // Sembunyikan dropdown & context menu saat klik di luar
         window.addEventListener('click', () => {
             quickSelectDropdown.classList.remove('show');
             hideContextMenu();
@@ -644,10 +594,6 @@
             contextMenu.style.display = 'none';
         }
 
-        // === PROSES EKSTRAKSI (TAHAP 2) ===
-        /**
-         * Membaca ulang MKV secara streaming dan mengekstrak item terpilih ke ZIP
-         */
         async function startExtraction() {
             btnExtract.disabled = true;
             const zip = new JSZip();
@@ -659,14 +605,13 @@
                 const activeTracks = item.tracks.filter(t => t.checked);
                 const activeFonts = item.attachments.filter(a => a.checked);
 
-                // Lewati file jika tidak ada yang dicentang
                 if (activeTracks.length === 0 && activeFonts.length === 0) continue;
 
-                writeLog(`[${i+1}/${mkvDatabase.length}] Mengekstrak: ${item.name}...`);
+                writeLog(`[${i+1}/${mkvDatabase.length}] Memproses: ${item.name}...`);
                 await extractSingleMKV(item, zip);
             }
 
-            writeLog("Membuat file paket ZIP...");
+            writeLog("Mengompresi file ke ZIP...");
             try {
                 const zipBlob = await zip.generateAsync({ type: 'blob' });
                 const zipUrl = URL.createObjectURL(zipBlob);
@@ -686,63 +631,63 @@
             btnExtract.disabled = false;
         }
 
-        /**
-         * Ekstraksi satu file MKV secara streaming dengan perbaikan format ASS
-         */
         function extractSingleMKV(item, zip) {
             return new Promise(async (resolve) => {
                 const parser = new window.MatroskaSubtitles.SubtitleParser();
                 let subtitleBuffers = {};
                 let srtIndexCounter = {};
 
-                // Siapkan buffer hanya untuk track yang DICENTANG
+                const baseName = item.name.replace(/\.[^/.]+$/, '');
+                // Buat subfolder per video atau simpan font ke folder Fonts umum
+                const fontFolder = zip.folder("Fonts");
+
                 item.tracks.forEach(t => {
                     if (t.checked) {
-                        const isASS = t.codec.includes('ASS') || t.type === 'ass';
-                        // Susun Header resmi ASS
+                        const codec = (t.codec || '').toUpperCase();
+                        const isASS = codec.includes('ASS') || codec.includes('SSA') || t.type === 'ass' || t.type === 'ssa';
+                        
                         subtitleBuffers[t.number] = isASS 
-                            ? (t.header || '[Script Info]\r\nTitle: Extracted Subtitle\r\n\r\n') + '[Events]\r\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\r\n'
+                            ? (t.header || '[Script Info]\r\nTitle: Extracted Subtitle\r\nScriptType: v4.00+\r\nWrapStyle: 0\r\nScaledBorderAndShadow: yes\r\n\r\n') + '[Events]\r\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\r\n'
                             : '';
                         srtIndexCounter[t.number] = 1;
                     }
                 });
 
-                // Rangkai teks dialog dengan timestamp
                 parser.on('subtitle', (sub, trackNo) => {
                     if (subtitleBuffers[trackNo] !== undefined) {
                         const track = item.tracks.find(t => t.number === trackNo);
-                        const isASS = track.codec.includes('ASS') || track.type === 'ass';
+                        const codec = (track && track.codec ? track.codec : '').toUpperCase();
+                        const isASS = codec.includes('ASS') || codec.includes('SSA');
 
                         if (isASS) {
-                            // REKONSTRUKSI ASS: Dialogue: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                             const start = formatTimeASS(sub.time);
                             const end = formatTimeASS((sub.time || 0) + (sub.duration || 0));
                             
-                            // Jika sub.text sudah mengandung format internal, pertahankan; jika belum, rakit ulang
-                            if (sub.text.startsWith('Dialogue:')) {
+                            if (sub.text && sub.text.startsWith('Dialogue:')) {
                                 subtitleBuffers[trackNo] += sub.text + '\r\n';
                             } else {
-                                subtitleBuffers[trackNo] += `Dialogue: 0,${start},${end},Default,,0,0,0,,${sub.text}\r\n`;
+                                subtitleBuffers[trackNo] += `Dialogue: 0,${start},${end},Default,,0,0,0,,${sub.text || ''}\r\n`;
                             }
                         } else {
-                            // FORMAT STANDAR SRT
                             const start = formatTimeSRT(sub.time || 0);
                             const end = formatTimeSRT((sub.time || 0) + (sub.duration || 0));
-                            subtitleBuffers[trackNo] += `${srtIndexCounter[trackNo]}\r\n${start} --> ${end}\r\n${sub.text}\r\n\r\n`;
+                            subtitleBuffers[trackNo] += `${srtIndexCounter[trackNo]}\r\n${start} --> ${end}\r\n${sub.text || ''}\r\n\r\n`;
                             srtIndexCounter[trackNo]++;
                         }
                     }
                 });
 
-                // Tangkap Font Attachment
+                // Ekstrak font ke ZIP (mencegah file font terlewat)
                 parser.on('file', (att) => {
-                    const isFontChecked = item.attachments.some(a => a.filename === att.filename && a.checked);
-                    if (isFontChecked) {
-                        zip.folder("Fonts").file(att.filename, att.data);
+                    const fn = att.filename;
+                    const isChecked = item.attachments.some(a => a.filename === fn && a.checked);
+                    
+                    // Jika dicentang atau belum ada di zip, masukkan
+                    if (isChecked && att.data) {
+                        fontFolder.file(fn, att.data);
                     }
                 });
 
-                // Baca seluruh stream file
                 const stream = item.fileRef.stream();
                 const reader = stream.getReader();
 
@@ -754,18 +699,18 @@
                     }
                     if (typeof parser.end === 'function') parser.end();
 
-                    // Simpan subtitle ke dalam ZIP
                     for (const [trackNo, content] of Object.entries(subtitleBuffers)) {
                         const t = item.tracks.find(x => x.number == trackNo);
-                        const ext = (t.codec.includes('ASS') || t.type === 'ass') ? 'ass' : 'srt';
-                        const lang = t.language ? `_${t.language}` : '';
-                        const outputFilename = `${item.name.replace(/\.[^/.]+$/, '')}_track${trackNo}${lang}.${ext}`;
+                        const codec = (t && t.codec ? t.codec : '').toUpperCase();
+                        const ext = (codec.includes('ASS') || codec.includes('SSA')) ? 'ass' : 'srt';
+                        const lang = t && t.language ? `_${t.language}` : '';
+                        const outputFilename = `${baseName}_track${trackNo}${lang}.${ext}`;
                         
                         zip.file(outputFilename, content);
-                        writeLog(`- Tersimpan: ${outputFilename}`);
+                        writeLog(`- Tersimpan subtitle: ${outputFilename}`);
                     }
                 } catch (err) {
-                    writeLog(`❌ Error membaca stream: ${err.message}`);
+                    writeLog(`❌ Error streaming: ${err.message}`);
                 }
 
                 resolve();
