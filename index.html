@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Web gMKVExtractGUI</title>
+    <title>Web gMKVExtractGUI Pro</title>
     
     <!-- Library Eksternal (Parser Matroska & Pembuat ZIP) -->
     <script src="https://cdn.jsdelivr.net/npm/matroska-subtitles@3.x/dist/matroska-subtitles.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
     <style>
-        /* === Variabel Warna & Tema (Dark Theme ala gMKVExtractGUI) === */
         :root {
             --bg-body: #141417;
             --bg-card: #1e1e24;
@@ -25,6 +24,8 @@
             --badge-audio: #10b981;
             --badge-sub: #f59e0b;
             --badge-font: #ec4899;
+            --menu-bg: #22222a;
+            --menu-hover: #3f3f50;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -39,18 +40,18 @@
 
         .app-container {
             width: 100%;
-            max-width: 900px;
+            max-width: 950px;
             background: var(--bg-card);
             border: 1px solid var(--border);
             border-radius: 12px;
             padding: 20px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            position: relative;
         }
 
         header h2 { font-size: 1.6rem; margin-bottom: 4px; }
         header p { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px; }
 
-        /* === Toolbar & Tombol Aksi === */
         .toolbar {
             display: flex;
             flex-wrap: wrap;
@@ -72,13 +73,13 @@
             align-items: center;
             gap: 8px;
             transition: all 0.2s;
+            user-select: none;
         }
         .btn:hover { background-color: var(--bg-item-hover); border-color: var(--accent); }
         .btn-primary { background-color: var(--accent); border-color: var(--accent); color: white; }
         .btn-primary:hover { background-color: var(--accent-hover); }
         .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        /* Input file transparan agar Android memanggil DocumentsUI tanpa filter ketat */
         .file-input-wrapper {
             position: relative;
             overflow: hidden;
@@ -91,46 +92,6 @@
             cursor: pointer;
         }
 
-        /* === Dropdown Menu (Untuk Mobile / Tombol Atas) === */
-        .dropdown { position: relative; }
-        .dropdown-menu {
-            display: none;
-            position: absolute;
-            top: 100%; left: 0;
-            background: #25252e;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            min-width: 250px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.6);
-            z-index: 100;
-            margin-top: 5px;
-        }
-        .dropdown-menu.show { display: block; }
-        .dropdown-item {
-            padding: 10px 15px;
-            font-size: 0.85rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            cursor: pointer;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-        }
-        .dropdown-item:hover { background-color: var(--accent); color: white; }
-        .dropdown-item:last-child { border-bottom: none; }
-
-        /* === Context Menu (Klik Kanan Khusus Desktop) === */
-        #contextMenu {
-            display: none;
-            position: fixed;
-            background: #25252e;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            min-width: 240px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.8);
-            z-index: 999;
-        }
-
-        /* === Status Counter Bar === */
         .status-bar {
             background: rgba(0,0,0,0.3);
             border: 1px solid var(--border);
@@ -144,16 +105,34 @@
             gap: 10px;
         }
 
-        /* === TreeView Container (Mirip gMKVExtractGUI) === */
+        /* Area TreeView + Drag & Drop */
         .tree-container {
-            border: 1px solid var(--border);
+            border: 2px dashed var(--border);
             border-radius: 8px;
             background: #18181c;
-            min-height: 250px;
-            max-height: 450px;
+            min-height: 280px;
+            max-height: 480px;
             overflow-y: auto;
-            padding: 10px;
+            padding: 12px;
             margin-bottom: 15px;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        .tree-container.drag-over {
+            border-color: var(--accent);
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        .drop-hint {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            pointer-events: none;
+            gap: 8px;
         }
 
         .file-node {
@@ -191,9 +170,7 @@
         }
         .track-item:last-child { border-bottom: none; }
         .track-item input[type="checkbox"] { cursor: pointer; width: 16px; height: 16px; }
-        .track-item input[type="checkbox"]:disabled { cursor: not-allowed; opacity: 0.3; }
 
-        /* Badge Warna Tipe Track */
         .type-badge {
             font-size: 0.7rem;
             font-weight: bold;
@@ -206,7 +183,6 @@
         .badge-sub { background: var(--badge-sub); color: black; }
         .badge-font { background: var(--badge-font); color: white; }
 
-        /* Log Box */
         .log-box {
             background: #000;
             border: 1px solid var(--border);
@@ -219,7 +195,72 @@
             color: #10b981;
         }
 
-        /* Responsif Mobile */
+        /* === MENU BERTINGKAT (DROPDOWN & CONTEXT MENU) === */
+        .g-menu {
+            display: none;
+            position: absolute;
+            background: var(--menu-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            min-width: 260px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            z-index: 10000;
+            padding: 5px 0;
+            font-size: 0.85rem;
+            user-select: none;
+        }
+
+        .g-item {
+            position: relative;
+            padding: 8px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            color: var(--text-main);
+            gap: 15px;
+        }
+        .g-item:hover {
+            background-color: var(--accent);
+            color: white;
+        }
+        .g-item.disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+        .g-item.has-sub::after {
+            content: '▸';
+            font-size: 0.85rem;
+            margin-left: auto;
+        }
+
+        .g-divider {
+            height: 1px;
+            background: rgba(255,255,255,0.08);
+            margin: 5px 0;
+        }
+
+        /* Submenu Melayang ke samping */
+        .g-submenu {
+            display: none;
+            position: absolute;
+            left: 100%;
+            top: -5px;
+            background: var(--menu-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            min-width: 240px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            padding: 5px 0;
+            z-index: 10001;
+            max-height: 380px;
+            overflow-y: auto;
+        }
+        .g-item:hover > .g-submenu {
+            display: block;
+        }
+
         @media (max-width: 600px) {
             .app-container { padding: 12px; }
             .toolbar { flex-direction: column; }
@@ -232,54 +273,37 @@
 
     <div class="app-container">
         <header>
-            <h2>Web gMKVExtractGUI</h2>
-            <p>Pilih file MKV untuk memindai trek & lampiran font secara instan.</p>
+            <h2>Web gMKVExtractGUI Pro</h2>
+            <p>Pindai, seleksi track cerdas, dan ekstrak subtitle/font MKV secara batch.</p>
         </header>
 
-        <!-- Baris Tombol Atas -->
         <div class="toolbar">
             <div class="file-input-wrapper">
                 <button class="btn btn-primary">📁 Tambah File MKV...</button>
-                <!-- Dikosongkan atribut accept-nya agar Android membuka DocumentsUI dengan leluasa -->
                 <input type="file" id="filePicker" multiple />
             </div>
 
-            <!-- Dropdown Aksi Massal (Mobile & Desktop) -->
-            <div class="dropdown">
-                <button class="btn" id="btnBatchSelect">⚡ Seleksi Cepat ▾</button>
-                <div class="dropdown-menu" id="quickSelectDropdown">
-                    <div class="dropdown-item" onclick="applySelection('all-subs')">
-                        <span>Centang Semua Subtitle</span>
-                        <span id="badgeAllSubs" class="file-badge">0/0</span>
-                    </div>
-                    <div class="dropdown-item" onclick="applySelection('ind-subs')">
-                        <span>Centang Subtitle Bahasa Indonesia</span>
-                        <span id="badgeIndSubs" class="file-badge">0/0</span>
-                    </div>
-                    <div class="dropdown-item" onclick="applySelection('all-fonts')">
-                        <span>Centang Semua Font</span>
-                        <span id="badgeAllFonts" class="file-badge">0/0</span>
-                    </div>
-                    <div class="dropdown-item" onclick="applySelection('clear')">
-                        <span>Hapus Semua Centang</span>
-                    </div>
-                </div>
-            </div>
+            <!-- Tombol Seleksi Menu Lengkap -->
+            <button class="btn" id="btnBatchMenu">⚡ Menu Seleksi Tracks ▾</button>
 
+            <button class="btn" onclick="expandAllFolders()">📂 Expand All</button>
+            <button class="btn" onclick="collapseAllFolders()">📁 Collapse All</button>
             <button class="btn" onclick="clearAllFiles()" style="margin-left: auto;">🗑️ Kosongkan</button>
         </div>
 
-        <!-- Status & Counter Akumulasi -->
         <div class="status-bar">
             <span>Total MKV: <b id="lblTotalFiles">0</b> File</span>
-            <span>Subtitle Tercentang: <b id="lblSelectedSubs">0</b> / <span id="lblTotalSubs">0</span></span>
-            <span>Font Tercentang: <b id="lblSelectedFonts">0</b> / <span id="lblTotalFonts">0</span></span>
+            <span>Subtitle: <b id="lblSelectedSubs">0</b> / <span id="lblTotalSubs">0</span></span>
+            <span>Font: <b id="lblSelectedFonts">0</b> / <span id="lblTotalFonts">0</span></span>
+            <span>Total Track Centang: <b id="lblTotalChecked">0</b> / <span id="lblTotalAll">0</span></span>
         </div>
 
-        <!-- Wadah TreeView (Mendukung Klik Kanan) -->
+        <!-- Wadah TreeView (Drag & Drop + Klik Kanan) -->
         <div class="tree-container" id="treeView">
-            <div style="text-align: center; color: var(--text-muted); margin-top: 90px;">
-                Belum ada file MKV yang diimpor. Klik tombol "Tambah File MKV..." di atas.
+            <div class="drop-hint" id="emptyHint">
+                <span style="font-size: 2.2rem;">📥</span>
+                <span>Tarik & lepas (drag and drop) file MKV ke sini</span>
+                <small style="color: var(--text-muted);">(atau klik tombol Tambah File MKV di atas)</small>
             </div>
         </div>
 
@@ -291,47 +315,26 @@
         <div class="log-box" id="logBox">Menunggu antrean...</div>
     </div>
 
-    <!-- Context Menu (Klik Kanan Khusus Layar Komputer) -->
-    <div id="contextMenu">
-        <div class="dropdown-item" onclick="applySelection('all-subs'); hideContextMenu();">
-            <span>Centang Semua Subtitle</span>
-        </div>
-        <div class="dropdown-item" onclick="applySelection('ind-subs'); hideContextMenu();">
-            <span>Centang Subtitle [ind] Saja</span>
-        </div>
-        <div class="dropdown-item" onclick="applySelection('all-fonts'); hideContextMenu();">
-            <span>Centang Semua Font</span>
-        </div>
-        <div class="dropdown-item" onclick="applySelection('clear'); hideContextMenu();">
-            <span>Hapus Semua Centang</span>
-        </div>
-    </div>
+    <!-- Container Menu Melayang Universal (Context Menu & Dropdown) -->
+    <div id="masterMenu" class="g-menu"></div>
 
     <script>
-        // === STATE GLOBAL APLIKASI ===
-        // Menyimpan data semua file MKV yang berhasil di-probe
         let mkvDatabase = []; 
 
         const filePicker = document.getElementById('filePicker');
         const treeView = document.getElementById('treeView');
+        const emptyHint = document.getElementById('emptyHint');
         const logBox = document.getElementById('logBox');
         const btnExtract = document.getElementById('btnExtract');
-        const contextMenu = document.getElementById('contextMenu');
-        const quickSelectDropdown = document.getElementById('quickSelectDropdown');
+        const masterMenu = document.getElementById('masterMenu');
+        const btnBatchMenu = document.getElementById('btnBatchMenu');
 
-        /**
-         * Fungsi logging ke terminal box visual
-         */
         function writeLog(msg) {
             const time = new Date().toLocaleTimeString();
             logBox.innerHTML += `<div>[${time}] ${msg}</div>`;
             logBox.scrollTop = logBox.scrollHeight;
         }
 
-        /**
-         * Format waktu milidetik ke centisecond standar ASS (H:MM:SS.cc)
-         * Contoh: 19120 ms -> "0:00:19.12"
-         */
         function formatTimeASS(ms) {
             if (!ms || ms < 0) ms = 0;
             const totalSec = Math.floor(ms / 1000);
@@ -342,10 +345,8 @@
             return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(cs).padStart(2, '0')}`;
         }
 
-        /**
-         * Format waktu milidetik ke standar SRT (HH:MM:SS,mmm)
-         */
         function formatTimeSRT(ms) {
+            if (!ms || ms < 0) ms = 0;
             let date = new Date(ms);
             let h = String(Math.floor(ms / 3600000)).padStart(2, '0');
             let m = String(date.getUTCMinutes()).padStart(2, '0');
@@ -354,26 +355,52 @@
             return `${h}:${m}:${s},${milli}`;
         }
 
-        // === PROSES INPUT & PROBING CEPAT (TAHAP 1) ===
+        // ==========================================
+        // FITUR DRAG & DROP
+        // ==========================================
+        ['dragenter', 'dragover'].forEach(eventName => {
+            treeView.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                treeView.classList.add('drag-over');
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            treeView.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                treeView.classList.remove('drag-over');
+            });
+        });
+
+        treeView.addEventListener('drop', async (e) => {
+            const dt = e.dataTransfer;
+            const files = Array.from(dt.files).filter(f => f.name.toLowerCase().endsWith('.mkv'));
+            if (files.length === 0) return;
+            await handleNewFiles(files);
+        });
+
         filePicker.addEventListener('change', async (e) => {
             const files = Array.from(e.target.files).filter(f => f.name.toLowerCase().endsWith('.mkv'));
             if (files.length === 0) return;
+            await handleNewFiles(files);
+            filePicker.value = '';
+        });
 
-            writeLog(`Mendeteksi ${files.length} file MKV. Memulai scanning cepat...`);
+        async function handleNewFiles(files) {
+            writeLog(`Mendeteksi ${files.length} file MKV. Memulai scanning metadata...`);
+            emptyHint.style.display = 'none';
 
             for (let i = 0; i < files.length; i++) {
-                writeLog(`Scanning metadata: ${files[i].name}...`);
+                writeLog(`Scanning (${i+1}/${files.length}): ${files[i].name}...`);
                 await probeMKV(files[i]);
             }
 
             renderTreeView();
             updateCounters();
-            filePicker.value = ''; // Reset input agar bisa pilih file ulang
-        });
+        }
 
-        /**
-         * Membaca informasi trek dan attachment dari MKV tanpa membebani RAM
-         */
         function probeMKV(file) {
             return new Promise(async (resolve) => {
                 const parser = new window.MatroskaSubtitles.SubtitleParser();
@@ -387,41 +414,55 @@
                     attachments: []
                 };
 
-                // Tangkap informasi track
                 parser.once('tracks', (tracks) => {
                     tracks.forEach(t => {
-                        const isSub = t.type === 'ass' || t.type === 'utf8' || t.type === 'subtitle' || (t.codec && t.codec.includes('S_TEXT'));
+                        const codec = (t.codec || '').toUpperCase();
+                        const typeStr = (t.type || '').toLowerCase();
                         
+                        let trackType = 'unknown';
+                        let isSub = false;
+
+                        if (typeStr.includes('video') || t.type === 1) trackType = 'video';
+                        else if (typeStr.includes('audio') || t.type === 2) trackType = 'audio';
+                        else if (typeStr.includes('sub') || typeStr === 'ass' || typeStr === 'ssa' || typeStr === 'utf8' || codec.includes('S_TEXT') || codec.includes('ASS')) {
+                            trackType = 'subtitle';
+                            isSub = true;
+                        }
+
                         fileEntry.tracks.push({
                             number: t.number,
-                            type: isSub ? 'subtitle' : (t.type || 'info'),
-                            codec: t.codec || (t.type === 'ass' ? 'S_TEXT/ASS' : 'UNKNOWN'),
+                            type: trackType,
+                            codec: t.codec || (isSub ? 'S_TEXT/ASS' : 'UNKNOWN'),
                             language: t.language || 'und',
+                            languageIETF: t.languageIETF || t.language || 'und',
+                            name: t.name || '',
+                            forced: !!t.forced,
                             header: t.header || '',
-                            isExtractable: isSub, // Hanya sub yang bisa dicentang untuk diekstrak
-                            checked: isSub // Otomatis dicentang secara default
+                            isExtractable: isSub,
+                            checked: isSub // default tercentang untuk sub
                         });
                     });
                 });
 
-                // Tangkap attachment font yang berada di header awal
                 parser.on('file', (att) => {
-                    // Cek jika belum ada di database
-                    if (!fileEntry.attachments.some(a => a.filename === att.filename)) {
+                    const fn = att.filename || `attachment_${Date.now()}`;
+                    const isFont = /\.(ttf|otf|ttc|woff|woff2)$/i.test(fn) || (att.mimeType && att.mimeType.includes('font'));
+
+                    if (!fileEntry.attachments.some(a => a.filename === fn)) {
                         fileEntry.attachments.push({
-                            filename: att.filename,
+                            filename: fn,
                             mime: att.mimeType || 'font/ttf',
                             size: att.data ? att.data.byteLength : 0,
-                            checked: true // Default tercentang
+                            isFont: isFont,
+                            checked: isFont
                         });
                     }
                 });
 
-                // Baca beberapa megabyte pertama untuk mendapatkan header/tracks secara instan
                 const stream = file.stream();
                 const reader = stream.getReader();
                 let bytesRead = 0;
-                const maxProbeBytes = 5 * 1024 * 1024; // Cukup 5MB awal untuk membaca metadata
+                const maxProbeBytes = Math.min(60 * 1024 * 1024, file.size);
 
                 try {
                     while (bytesRead < maxProbeBytes) {
@@ -430,27 +471,300 @@
                         bytesRead += value.length;
                         parser.write(value);
                     }
-                    reader.cancel(); // Batalkan pembacaan agar hemat resource
-                } catch (err) {
-                    // Abaikan stream cancellation
-                }
+                    reader.cancel();
+                } catch (err) {}
 
                 mkvDatabase.push(fileEntry);
                 resolve();
             });
         }
 
-        // === RENDER TREEVIEW KE LAYAR ===
-        /**
-         * Menggambar ulang struktur direktori treeview mirip gMKVExtractGUI
-         */
+        // ==========================================
+        // STATISTIK TRACK LENGKAP UNTUK SUBMENU
+        // ==========================================
+        function getStats() {
+            let s = {
+                totalFiles: mkvDatabase.length,
+                totalAll: 0,
+                totalChecked: 0,
+                video: { total: 0, checked: 0, langs: {}, codecs: {}, names: {} },
+                audio: { total: 0, checked: 0, langs: {}, codecs: {}, names: {} },
+                sub: { total: 0, checked: 0, langs: {}, langsIETF: {}, codecs: {}, names: {}, forcedYes: 0, forcedNo: 0 },
+                att: { total: 0, checked: 0, fonts: 0, fontsChecked: 0, nonFonts: 0, nonFontsChecked: 0 },
+                chapters: { total: 0, checked: 0 }
+            };
+
+            mkvDatabase.forEach(f => {
+                f.tracks.forEach(t => {
+                    s.totalAll++;
+                    if (t.checked) s.totalChecked++;
+
+                    const lang = t.language || 'und';
+                    const langIETF = t.languageIETF || 'und';
+                    const codec = t.codec || 'UNKNOWN';
+                    const name = t.name || 'Tanpa Nama';
+
+                    if (t.type === 'video') {
+                        s.video.total++;
+                        if (t.checked) s.video.checked++;
+                        s.video.langs[lang] = (s.video.langs[lang] || 0) + 1;
+                        s.video.codecs[codec] = (s.video.codecs[codec] || 0) + 1;
+                        s.video.names[name] = (s.video.names[name] || 0) + 1;
+                    } else if (t.type === 'audio') {
+                        s.audio.total++;
+                        if (t.checked) s.audio.checked++;
+                        s.audio.langs[lang] = (s.audio.langs[lang] || 0) + 1;
+                        s.audio.codecs[codec] = (s.audio.codecs[codec] || 0) + 1;
+                        s.audio.names[name] = (s.audio.names[name] || 0) + 1;
+                    } else if (t.type === 'subtitle') {
+                        s.sub.total++;
+                        if (t.checked) s.sub.checked++;
+                        s.sub.langs[lang] = (s.sub.langs[lang] || 0) + 1;
+                        s.sub.langsIETF[langIETF] = (s.sub.langsIETF[langIETF] || 0) + 1;
+                        s.sub.codecs[codec] = (s.sub.codecs[codec] || 0) + 1;
+                        s.sub.names[name] = (s.sub.names[name] || 0) + 1;
+                        if (t.forced) s.sub.forcedYes++; else s.sub.forcedNo++;
+                    }
+                });
+
+                f.attachments.forEach(a => {
+                    s.totalAll++;
+                    if (a.checked) s.totalChecked++;
+                    s.att.total++;
+                    if (a.checked) s.att.checked++;
+                    if (a.isFont) {
+                        s.att.fonts++;
+                        if (a.checked) s.att.fontsChecked++;
+                    } else {
+                        s.att.nonFonts++;
+                        if (a.checked) s.att.nonFontsChecked++;
+                    }
+                });
+            });
+
+            return s;
+        }
+
+        // ==========================================
+        // MEMBANGUN STRUKTUR MENU PERSIS gMKVExtractGUI
+        // ==========================================
+        function buildMenuHTML(stats) {
+            const hasFiles = stats.totalFiles > 0;
+            const disabledClass = hasFiles ? '' : 'disabled';
+
+            const subLangItems = Object.entries(stats.sub.langs).map(([k, v]) => 
+                `<div class="g-item" onclick="applyCheck('sub', 'lang', '${k}', true)">[${k}] (${v})</div>`
+            ).join('') || `<div class="g-item disabled">(Kosong)</div>`;
+
+            const subLangIETFItems = Object.entries(stats.sub.langsIETF).map(([k, v]) => 
+                `<div class="g-item" onclick="applyCheck('sub', 'langIETF', '${k}', true)">[${k}] (${v})</div>`
+            ).join('') || `<div class="g-item disabled">(Kosong)</div>`;
+
+            const subCodecItems = Object.entries(stats.sub.codecs).map(([k, v]) => 
+                `<div class="g-item" onclick="applyCheck('sub', 'codec', '${k}', true)">[${k}] (${v})</div>`
+            ).join('') || `<div class="g-item disabled">(Kosong)</div>`;
+
+            const subNameItems = Object.entries(stats.sub.names).map(([k, v]) => 
+                `<div class="g-item" onclick="applyCheck('sub', 'name', '${k}', true)">${k} (${v})</div>`
+            ).join('') || `<div class="g-item disabled">(Kosong)</div>`;
+
+            return `
+                <div class="g-item" onclick="filePicker.click()">Add Input File(s)...</div>
+                <div class="g-divider"></div>
+
+                <div class="g-item ${disabledClass}" onclick="applyCheck('all', 'all', '', true)">
+                    Check All Tracks (${stats.totalChecked}/${stats.totalAll})
+                </div>
+
+                <!-- Video -->
+                <div class="g-item has-sub ${disabledClass}">
+                    <span>Check Video Tracks... (${stats.video.checked}/${stats.video.total})</span>
+                    <div class="g-submenu">
+                        <div class="g-item" onclick="applyCheck('video', 'all', '', true)">All Video Tracks (${stats.video.total})</div>
+                    </div>
+                </div>
+
+                <!-- Audio (Melihat dual audio dll) -->
+                <div class="g-item has-sub ${disabledClass}">
+                    <span>Check Audio Tracks... (${stats.audio.checked}/${stats.audio.total})</span>
+                    <div class="g-submenu">
+                        <div class="g-item" onclick="applyCheck('audio', 'all', '', true)">All Audio Tracks (${stats.audio.total})</div>
+                    </div>
+                </div>
+
+                <!-- Subtitle Submenu Lengkap -->
+                <div class="g-item has-sub ${disabledClass}">
+                    <span>Check Subtitle Tracks... (${stats.sub.checked}/${stats.sub.total})</span>
+                    <div class="g-submenu">
+                        <div class="g-item" onclick="applyCheck('sub', 'all', '', true)">All Subtitle Tracks (${stats.sub.total})</div>
+                        <div class="g-item has-sub">
+                            <span>Subtitle Tracks by Language (${Object.keys(stats.sub.langs).length})...</span>
+                            <div class="g-submenu">${subLangItems}</div>
+                        </div>
+                        <div class="g-item has-sub">
+                            <span>Subtitle Tracks by Language IETF (${Object.keys(stats.sub.langsIETF).length})...</span>
+                            <div class="g-submenu">${subLangIETFItems}</div>
+                        </div>
+                        <div class="g-item has-sub">
+                            <span>Subtitle Tracks by Codec (${Object.keys(stats.sub.codecs).length})...</span>
+                            <div class="g-submenu">${subCodecItems}</div>
+                        </div>
+                        <div class="g-item has-sub">
+                            <span>Subtitle Tracks by Track Name (${Object.keys(stats.sub.names).length})...</span>
+                            <div class="g-submenu">${subNameItems}</div>
+                        </div>
+                        <div class="g-item has-sub">
+                            <span>Subtitle Tracks by Forced...</span>
+                            <div class="g-submenu">
+                                <div class="g-item" onclick="applyCheck('sub', 'forced', true, true)">Forced: Yes (${stats.sub.forcedYes})</div>
+                                <div class="g-item" onclick="applyCheck('sub', 'forced', false, true)">Forced: No (${stats.sub.forcedNo})</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chapter Tracks -->
+                <div class="g-item disabled">
+                    <span>Check Chapter Tracks... (0/0)</span>
+                </div>
+
+                <!-- Attachment Tracks -->
+                <div class="g-item has-sub ${disabledClass}">
+                    <span>Check Attachment Tracks... (${stats.att.checked}/${stats.att.total})</span>
+                    <div class="g-submenu">
+                        <div class="g-item" onclick="applyCheck('att', 'all', '', true)">All Attachment Tracks (${stats.att.total})</div>
+                        <div class="g-item" onclick="applyCheck('att', 'font', '', true)">Font Attachments (${stats.att.fonts})</div>
+                        <div class="g-item" onclick="applyCheck('att', 'nonFont', '', true)">Non-Font Attachments (${stats.att.nonFonts})</div>
+                    </div>
+                </div>
+
+                <div class="g-divider"></div>
+
+                <!-- Bagian Uncheck -->
+                <div class="g-item ${disabledClass}" onclick="applyCheck('all', 'all', '', false)">
+                    Uncheck All Tracks (${stats.totalChecked}/${stats.totalAll})
+                </div>
+                <div class="g-item ${disabledClass}" onclick="applyCheck('sub', 'all', '', false)">
+                    Uncheck Subtitle Tracks... (${stats.sub.checked}/${stats.sub.total})
+                </div>
+                <div class="g-item ${disabledClass}" onclick="applyCheck('att', 'all', '', false)">
+                    Uncheck Attachment Tracks... (${stats.att.checked}/${stats.att.total})
+                </div>
+
+                <div class="g-divider"></div>
+                <div class="g-item ${disabledClass}" onclick="clearAllFiles()">Remove All Input Files (${stats.totalFiles})</div>
+                <div class="g-divider"></div>
+                <div class="g-item ${disabledClass}" onclick="expandAllFolders()">Expand All</div>
+                <div class="g-item ${disabledClass}" onclick="collapseAllFolders()">Collapse All</div>
+            `;
+        }
+
+        // ==========================================
+        // EKSEKUSI FILTER CHECK / UNCHECK
+        // ==========================================
+        function applyCheck(type, filterKey, filterVal, state) {
+            mkvDatabase.forEach(file => {
+                file.tracks.forEach(t => {
+                    let match = false;
+                    if (type === 'all') match = true;
+                    else if (type === t.type) {
+                        if (filterKey === 'all') match = true;
+                        else if (filterKey === 'lang' && (t.language || 'und') === filterVal) match = true;
+                        else if (filterKey === 'langIETF' && (t.languageIETF || 'und') === filterVal) match = true;
+                        else if (filterKey === 'codec' && t.codec === filterVal) match = true;
+                        else if (filterKey === 'name' && (t.name || 'Tanpa Nama') === filterVal) match = true;
+                        else if (filterKey === 'forced' && t.forced === filterVal) match = true;
+                    }
+
+                    if (match) t.checked = state;
+                });
+
+                file.attachments.forEach(a => {
+                    let match = false;
+                    if (type === 'all') match = true;
+                    else if (type === 'att') {
+                        if (filterKey === 'all') match = true;
+                        else if (filterKey === 'font' && a.isFont) match = true;
+                        else if (filterKey === 'nonFont' && !a.isFont) match = true;
+                    }
+                    if (match) a.checked = state;
+                });
+            });
+
+            renderTreeView();
+            updateCounters();
+            closeMasterMenu();
+        }
+
+        // ==========================================
+        // KONTROL TAMPILAN MENU
+        // ==========================================
+        function showMenuAt(x, y) {
+            masterMenu.innerHTML = buildMenuHTML(getStats());
+            masterMenu.style.display = 'block';
+
+            // Boundary screen check
+            const menuRect = masterMenu.getBoundingClientRect();
+            if (x + menuRect.width > window.innerWidth) x = window.innerWidth - menuRect.width - 15;
+            if (y + menuRect.height > window.innerHeight) y = window.innerHeight - menuRect.height - 15;
+
+            masterMenu.style.left = `${Math.max(10, x)}px`;
+            masterMenu.style.top = `${Math.max(10, y)}px`;
+
+            // Atur arah submenu agar tidak keluar layar kanan
+            masterMenu.querySelectorAll('.g-item.has-sub').forEach(item => {
+                item.addEventListener('mouseenter', () => {
+                    const sub = item.querySelector('.g-submenu');
+                    if (sub) {
+                        const rect = sub.getBoundingClientRect();
+                        if (rect.right > window.innerWidth) {
+                            sub.style.left = 'auto';
+                            sub.style.right = '100%';
+                        } else {
+                            sub.style.left = '100%';
+                            sub.style.right = 'auto';
+                        }
+                    }
+                });
+            });
+        }
+
+        function closeMasterMenu() {
+            masterMenu.style.display = 'none';
+        }
+
+        // 1. Klik Kanan di TreeView
+        treeView.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            showMenuAt(e.clientX, e.clientY);
+        });
+
+        // 2. Klik Tombol "⚡ Menu Seleksi Tracks"
+        btnBatchMenu.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const rect = btnBatchMenu.getBoundingClientRect();
+            showMenuAt(rect.left, rect.bottom + 5);
+        });
+
+        window.addEventListener('click', (e) => {
+            if (!masterMenu.contains(e.target) && e.target !== btnBatchMenu) {
+                closeMasterMenu();
+            }
+        });
+
+        // ==========================================
+        // RENDER TREEVIEW
+        // ==========================================
         function renderTreeView() {
             if (mkvDatabase.length === 0) {
-                treeView.innerHTML = `<div style="text-align: center; color: var(--text-muted); margin-top: 90px;">Belum ada file MKV yang diimpor.</div>`;
+                treeView.innerHTML = '';
+                treeView.appendChild(emptyHint);
+                emptyHint.style.display = 'flex';
                 btnExtract.disabled = true;
                 return;
             }
 
+            emptyHint.style.display = 'none';
             treeView.innerHTML = '';
             btnExtract.disabled = false;
 
@@ -458,53 +772,45 @@
                 const fileBox = document.createElement('div');
                 fileBox.className = 'file-node';
 
-                // Hitung berapa item yang dicentang di file ini
                 const checkedCount = item.tracks.filter(t => t.checked).length + item.attachments.filter(a => a.checked).length;
-                const totalCount = item.tracks.filter(t => t.isExtractable).length + item.attachments.length;
+                const totalCount = item.tracks.length + item.attachments.length;
 
-                // Template Header File
                 fileBox.innerHTML = `
-                    <div class="file-header" onclick="toggleCollapse(this)">
+                    <div class="file-header" onclick="this.classList.toggle('collapsed')">
                         <span class="toggle-icon">▼</span>
                         <span class="file-title">📁 [${item.name}] (${item.size})</span>
-                        <span class="file-badge" id="badge_file_${fileIdx}">${checkedCount}/${totalCount} Terpilih</span>
+                        <span class="file-badge">${checkedCount}/${totalCount} Terpilih</span>
                     </div>
-                    <div class="track-list" id="track_list_${fileIdx}"></div>
+                    <div class="track-list"></div>
                 `;
 
                 const trackListEl = fileBox.querySelector('.track-list');
 
-                // 1. Render Tracks (Video, Audio, Subtitle)
                 item.tracks.forEach((track, trackIdx) => {
                     const row = document.createElement('div');
                     row.className = 'track-item';
 
-                    const badgeClass = track.type === 'subtitle' ? 'badge-sub' : (track.type.includes('audio') ? 'badge-audio' : 'badge-video');
-                    const badgeText = track.type === 'subtitle' ? 'Subtitles' : track.type;
+                    const badgeClass = track.type === 'subtitle' ? 'badge-sub' : (track.type === 'audio' ? 'badge-audio' : 'badge-video');
+                    const badgeText = track.type.toUpperCase();
+                    const nameLabel = track.name ? ` "${track.name}"` : '';
+                    const forcedLabel = track.forced ? ' [Forced]' : '';
 
                     row.innerHTML = `
-                        <input type="checkbox" 
-                            ${track.isExtractable ? '' : 'disabled'} 
-                            ${track.checked ? 'checked' : ''} 
-                            onchange="onTrackCheckChange(${fileIdx}, ${trackIdx}, this.checked)"
-                        />
+                        <input type="checkbox" ${track.checked ? 'checked' : ''} onchange="onTrackCheck(${fileIdx}, ${trackIdx}, this.checked)" />
                         <span class="type-badge ${badgeClass}">${badgeText}</span>
-                        <span>Track ${track.number} [${track.codec}][${track.language}]</span>
+                        <span>Track ${track.number} [${track.codec}] [${track.language}]${nameLabel}${forcedLabel}</span>
                     `;
                     trackListEl.appendChild(row);
                 });
 
-                // 2. Render Font Attachments
                 item.attachments.forEach((att, attIdx) => {
                     const row = document.createElement('div');
                     row.className = 'track-item';
+                    const sizeStr = att.size > 0 ? ` (${(att.size / 1024).toFixed(1)} KB)` : '';
                     row.innerHTML = `
-                        <input type="checkbox" 
-                            ${att.checked ? 'checked' : ''} 
-                            onchange="onAttachmentCheckChange(${fileIdx}, ${attIdx}, this.checked)"
-                        />
-                        <span class="type-badge badge-font">Attachment</span>
-                        <span>[${att.filename}] (${(att.size / 1024).toFixed(1)} KB)</span>
+                        <input type="checkbox" ${att.checked ? 'checked' : ''} onchange="onAttCheck(${fileIdx}, ${attIdx}, this.checked)" />
+                        <span class="type-badge badge-font">${att.isFont ? 'Font' : 'Attachment'}</span>
+                        <span>[${att.filename}]${sizeStr}</span>
                     `;
                     trackListEl.appendChild(row);
                 });
@@ -513,160 +819,79 @@
             });
         }
 
-        /**
-         * Membuka / Menutup node folder di TreeView
-         */
-        function toggleCollapse(headerEl) {
-            headerEl.classList.toggle('collapsed');
-        }
-
-        /**
-         * Event saat checkbox track satuan diubah
-         */
-        function onTrackCheckChange(fileIdx, trackIdx, isChecked) {
-            mkvDatabase[fileIdx].tracks[trackIdx].checked = isChecked;
+        function onTrackCheck(fIdx, tIdx, isChecked) {
+            mkvDatabase[fIdx].tracks[tIdx].checked = isChecked;
             updateCounters();
         }
 
-        /**
-         * Event saat checkbox attachment font satuan diubah
-         */
-        function onAttachmentCheckChange(fileIdx, attIdx, isChecked) {
-            mkvDatabase[fileIdx].attachments[attIdx].checked = isChecked;
+        function onAttCheck(fIdx, aIdx, isChecked) {
+            mkvDatabase[fIdx].attachments[aIdx].checked = isChecked;
             updateCounters();
         }
 
-        /**
-         * Menghitung akumulasi checkbox dan memperbarui badge status
-         */
         function updateCounters() {
-            let totalSubs = 0, selectedSubs = 0;
-            let totalFonts = 0, selectedFonts = 0;
-            let indSubsTotal = 0, indSubsSelected = 0;
+            const s = getStats();
+            document.getElementById('lblTotalFiles').innerText = s.totalFiles;
+            document.getElementById('lblSelectedSubs').innerText = s.sub.checked;
+            document.getElementById('lblTotalSubs').innerText = s.sub.total;
+            document.getElementById('lblSelectedFonts').innerText = s.att.fontsChecked;
+            document.getElementById('lblTotalFonts').innerText = s.att.fonts;
+            document.getElementById('lblTotalChecked').innerText = s.totalChecked;
+            document.getElementById('lblTotalAll').innerText = s.totalAll;
 
-            mkvDatabase.forEach((file, fileIdx) => {
-                let fileChecked = 0;
-                let fileTotal = 0;
-
-                file.tracks.forEach(t => {
-                    if (t.isExtractable) {
-                        totalSubs++;
-                        fileTotal++;
-                        if (t.checked) { selectedSubs++; fileChecked++; }
-
-                        // Khusus hitung Subtitle Bahasa Indonesia
-                        if (t.language.toLowerCase() === 'ind' || t.language.toLowerCase() === 'id') {
-                            indSubsTotal++;
-                            if (t.checked) indSubsSelected++;
-                        }
-                    }
-                });
-
-                file.attachments.forEach(a => {
-                    totalFonts++;
-                    fileTotal++;
-                    if (a.checked) { selectedFonts++; fileChecked++; }
-                });
-
-                // Update badge kecil per-file
-                const fileBadge = document.getElementById(`badge_file_${fileIdx}`);
-                if (fileBadge) fileBadge.innerText = `${fileChecked}/${fileTotal} Terpilih`;
+            const headers = document.querySelectorAll('.file-header');
+            mkvDatabase.forEach((item, idx) => {
+                if (headers[idx]) {
+                    const badge = headers[idx].querySelector('.file-badge');
+                    const checked = item.tracks.filter(t => t.checked).length + item.attachments.filter(a => a.checked).length;
+                    const total = item.tracks.length + item.attachments.length;
+                    if (badge) badge.innerText = `${checked}/${total} Terpilih`;
+                }
             });
-
-            // Update label global
-            document.getElementById('lblTotalFiles').innerText = mkvDatabase.length;
-            document.getElementById('lblSelectedSubs').innerText = selectedSubs;
-            document.getElementById('lblTotalSubs').innerText = totalSubs;
-            document.getElementById('lblSelectedFonts').innerText = selectedFonts;
-            document.getElementById('lblTotalFonts').innerText = totalFonts;
-
-            // Update badge di dalam menu dropdown
-            document.getElementById('badgeAllSubs').innerText = `${selectedSubs}/${totalSubs}`;
-            document.getElementById('badgeIndSubs').innerText = `${indSubsSelected}/${indSubsTotal}`;
-            document.getElementById('badgeAllFonts').innerText = `${selectedFonts}/${totalFonts}`;
         }
 
-        // === FITUR CHECKBOX MASSAL (DROPDOWN & KLIK KANAN) ===
-        /**
-         * Menerapkan filter centang massal
-         */
-        function applySelection(mode) {
-            mkvDatabase.forEach(file => {
-                file.tracks.forEach(t => {
-                    if (!t.isExtractable) return;
-                    if (mode === 'all-subs') t.checked = true;
-                    if (mode === 'ind-subs') t.checked = (t.language.toLowerCase() === 'ind' || t.language.toLowerCase() === 'id');
-                    if (mode === 'clear') t.checked = false;
-                });
-
-                file.attachments.forEach(a => {
-                    if (mode === 'all-fonts') a.checked = true;
-                    if (mode === 'clear') a.checked = false;
-                });
-            });
-
-            renderTreeView();
-            updateCounters();
-            quickSelectDropdown.classList.remove('show');
+        function expandAllFolders() {
+            document.querySelectorAll('.file-header').forEach(el => el.classList.remove('collapsed'));
         }
 
-        /**
-         * Reset seluruh daftar file
-         */
+        function collapseAllFolders() {
+            document.querySelectorAll('.file-header').forEach(el => el.classList.add('collapsed'));
+        }
+
         function clearAllFiles() {
             mkvDatabase = [];
             renderTreeView();
             updateCounters();
-            writeLog("Seluruh antrean dikosongkan.");
+            closeMasterMenu();
+            writeLog("Seluruh antrean dibersihkan.");
         }
 
-        // === DROPDOWN & CONTEXT MENU LISTENERS ===
-        document.getElementById('btnBatchSelect').addEventListener('click', (e) => {
-            e.stopPropagation();
-            quickSelectDropdown.classList.toggle('show');
-        });
-
-        // Tampilkan context menu saat klik kanan di area treeview (Desktop)
-        treeView.addEventListener('contextmenu', (e) => {
-            e.preventDefault();
-            contextMenu.style.top = `${e.clientY}px`;
-            contextMenu.style.left = `${e.clientX}px`;
-            contextMenu.style.display = 'block';
-        });
-
-        // Sembunyikan dropdown & context menu saat klik di luar
-        window.addEventListener('click', () => {
-            quickSelectDropdown.classList.remove('show');
-            hideContextMenu();
-        });
-
-        function hideContextMenu() {
-            contextMenu.style.display = 'none';
-        }
-
-        // === PROSES EKSTRAKSI (TAHAP 2) ===
-        /**
-         * Membaca ulang MKV secara streaming dan mengekstrak item terpilih ke ZIP
-         */
+        // ==========================================
+        // PROSES EKSTRAKSI (SUBTITLE & FONT)
+        // ==========================================
         async function startExtraction() {
             btnExtract.disabled = true;
             const zip = new JSZip();
 
-            writeLog("<b>Memulai proses ekstraksi batch...</b>");
+            writeLog("<b>Memulai ekstraksi batch...</b>");
 
             for (let i = 0; i < mkvDatabase.length; i++) {
                 const item = mkvDatabase[i];
-                const activeTracks = item.tracks.filter(t => t.checked);
+                const activeSubs = item.tracks.filter(t => t.type === 'subtitle' && t.checked);
                 const activeFonts = item.attachments.filter(a => a.checked);
+                const nonSubChecked = item.tracks.some(t => t.type !== 'subtitle' && t.checked);
 
-                // Lewati file jika tidak ada yang dicentang
-                if (activeTracks.length === 0 && activeFonts.length === 0) continue;
+                if (nonSubChecked) {
+                    writeLog(`ℹ️ [Info] Track Video/Audio pada '${item.name}' dilewati karena web fokus pada Subtitle & Font.`);
+                }
 
-                writeLog(`[${i+1}/${mkvDatabase.length}] Mengekstrak: ${item.name}...`);
+                if (activeSubs.length === 0 && activeFonts.length === 0) continue;
+
+                writeLog(`[${i+1}/${mkvDatabase.length}] Memproses: ${item.name}...`);
                 await extractSingleMKV(item, zip);
             }
 
-            writeLog("Membuat file paket ZIP...");
+            writeLog("Mengompresi seluruh file ke ZIP...");
             try {
                 const zipBlob = await zip.generateAsync({ type: 'blob' });
                 const zipUrl = URL.createObjectURL(zipBlob);
@@ -686,63 +911,59 @@
             btnExtract.disabled = false;
         }
 
-        /**
-         * Ekstraksi satu file MKV secara streaming dengan perbaikan format ASS
-         */
         function extractSingleMKV(item, zip) {
             return new Promise(async (resolve) => {
                 const parser = new window.MatroskaSubtitles.SubtitleParser();
                 let subtitleBuffers = {};
                 let srtIndexCounter = {};
 
-                // Siapkan buffer hanya untuk track yang DICENTANG
+                const baseName = item.name.replace(/\.[^/.]+$/, '');
+                const fontFolder = zip.folder("Fonts");
+
                 item.tracks.forEach(t => {
-                    if (t.checked) {
-                        const isASS = t.codec.includes('ASS') || t.type === 'ass';
-                        // Susun Header resmi ASS
+                    if (t.type === 'subtitle' && t.checked) {
+                        const codec = (t.codec || '').toUpperCase();
+                        const isASS = codec.includes('ASS') || codec.includes('SSA');
+                        
                         subtitleBuffers[t.number] = isASS 
-                            ? (t.header || '[Script Info]\r\nTitle: Extracted Subtitle\r\n\r\n') + '[Events]\r\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\r\n'
+                            ? (t.header || '[Script Info]\r\nTitle: Extracted Subtitle\r\nScriptType: v4.00+\r\nWrapStyle: 0\r\nScaledBorderAndShadow: yes\r\n\r\n') + '[Events]\r\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\r\n'
                             : '';
                         srtIndexCounter[t.number] = 1;
                     }
                 });
 
-                // Rangkai teks dialog dengan timestamp
                 parser.on('subtitle', (sub, trackNo) => {
                     if (subtitleBuffers[trackNo] !== undefined) {
                         const track = item.tracks.find(t => t.number === trackNo);
-                        const isASS = track.codec.includes('ASS') || track.type === 'ass';
+                        const codec = (track && track.codec ? track.codec : '').toUpperCase();
+                        const isASS = codec.includes('ASS') || codec.includes('SSA');
 
                         if (isASS) {
-                            // REKONSTRUKSI ASS: Dialogue: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                             const start = formatTimeASS(sub.time);
                             const end = formatTimeASS((sub.time || 0) + (sub.duration || 0));
                             
-                            // Jika sub.text sudah mengandung format internal, pertahankan; jika belum, rakit ulang
-                            if (sub.text.startsWith('Dialogue:')) {
+                            if (sub.text && sub.text.startsWith('Dialogue:')) {
                                 subtitleBuffers[trackNo] += sub.text + '\r\n';
                             } else {
-                                subtitleBuffers[trackNo] += `Dialogue: 0,${start},${end},Default,,0,0,0,,${sub.text}\r\n`;
+                                subtitleBuffers[trackNo] += `Dialogue: 0,${start},${end},Default,,0,0,0,,${sub.text || ''}\r\n`;
                             }
                         } else {
-                            // FORMAT STANDAR SRT
                             const start = formatTimeSRT(sub.time || 0);
                             const end = formatTimeSRT((sub.time || 0) + (sub.duration || 0));
-                            subtitleBuffers[trackNo] += `${srtIndexCounter[trackNo]}\r\n${start} --> ${end}\r\n${sub.text}\r\n\r\n`;
+                            subtitleBuffers[trackNo] += `${srtIndexCounter[trackNo]}\r\n${start} --> ${end}\r\n${sub.text || ''}\r\n\r\n`;
                             srtIndexCounter[trackNo]++;
                         }
                     }
                 });
 
-                // Tangkap Font Attachment
                 parser.on('file', (att) => {
-                    const isFontChecked = item.attachments.some(a => a.filename === att.filename && a.checked);
-                    if (isFontChecked) {
-                        zip.folder("Fonts").file(att.filename, att.data);
+                    const fn = att.filename;
+                    const isChecked = item.attachments.some(a => a.filename === fn && a.checked);
+                    if (isChecked && att.data) {
+                        fontFolder.file(fn, att.data);
                     }
                 });
 
-                // Baca seluruh stream file
                 const stream = item.fileRef.stream();
                 const reader = stream.getReader();
 
@@ -754,18 +975,18 @@
                     }
                     if (typeof parser.end === 'function') parser.end();
 
-                    // Simpan subtitle ke dalam ZIP
                     for (const [trackNo, content] of Object.entries(subtitleBuffers)) {
                         const t = item.tracks.find(x => x.number == trackNo);
-                        const ext = (t.codec.includes('ASS') || t.type === 'ass') ? 'ass' : 'srt';
-                        const lang = t.language ? `_${t.language}` : '';
-                        const outputFilename = `${item.name.replace(/\.[^/.]+$/, '')}_track${trackNo}${lang}.${ext}`;
+                        const codec = (t && t.codec ? t.codec : '').toUpperCase();
+                        const ext = (codec.includes('ASS') || codec.includes('SSA')) ? 'ass' : 'srt';
+                        const lang = t && t.language ? `_${t.language}` : '';
+                        const outputFilename = `${baseName}_track${trackNo}${lang}.${ext}`;
                         
                         zip.file(outputFilename, content);
-                        writeLog(`- Tersimpan: ${outputFilename}`);
+                        writeLog(`- Tersimpan subtitle: ${outputFilename}`);
                     }
                 } catch (err) {
-                    writeLog(`❌ Error membaca stream: ${err.message}`);
+                    writeLog(`❌ Error streaming: ${err.message}`);
                 }
 
                 resolve();
