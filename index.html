@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web gMKVExtractor (Client-Side)</title>
+    <!-- Load Matroska Parser -->
+    <script src="https://cdn.jsdelivr.net/npm/matroska-subtitles@3.x/dist/matroska-subtitles.min.js"></script>
+    <!-- Load JSZip untuk Batch Processing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .log { background: #f4f4f4; padding: 10px; height: 300px; overflow-y: scroll; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <h2>Web MKV Subtitle & Font Extractor</h2>
+    <p>Pilih file MKV Anime (Bisa lebih dari satu/Batch)</p>
+    
+    <input type="file" id="mkvInput" accept=".mkv" multiple />
+    <button id="extractBtn">Mulai Ekstrak (Batch ZIP)</button>
+
+    <div class="log" id="logBox"></div>
+
+    <script>
+        const logBox = document.getElementById('logBox');
+        function log(msg) {
+            logBox.innerHTML += `<div>${msg}</div>`;
+            logBox.scrollTop = logBox.scrollHeight;
+        }
+
+        document.getElementById('extractBtn').addEventListener('click', async () => {
+            const files = document.getElementById('mkvInput').files;
+            if (files.length === 0) return alert("Pilih file MKV dulu!");
+
+            const zip = new JSZip(); // Siapkan file ZIP
+            
+            // Proses file satu-satu (agar RAM tidak jebol)
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                log(`<br><b>Memproses: ${file.name}...</b>`);
+                await processMKV(file, zip);
+            }
+
+            log("<b>Semua file selesai diproses! Membuat file ZIP...</b>");
+            
+            // Download hasil akhir dalam bentuk .zip
+            const zipBlob = await zip.generateAsync({ type: "blob" });
+            const zipUrl = URL.createObjectURL(zipBlob);
+            const a = document.createElement("a");
+            a.href = zipUrl;
+            a.download = "Extracted_Subtitles.zip";
+            a.click();
+            
+            log("<b>Proses Selesai! File ZIP berhasil diunduh.</b>");
+        });
+
+        // Fungsi Ekstraksi Utama
+        function processMKV(file, zip) {
+            return new Promise(async (resolve, reject) => {
+                // Inisialisasi parser bawaan browser dari CDN
+                const parser = new window.MatroskaSubtitles.SubtitleParser();
+                
+                let assTracks = {}; // Simpan data ASS per track
+                
+                // EVENT 1: Saat Metadata/Track MKV terbaca di awal
+                parser.once('tracks', (tracks) => {
+                    log(`Ditemukan ${tracks.length} track subtitle.`);
+                    tracks.forEach(track => {
+                        log(`- Track ${track.number} | Bahasa: ${track.language || 'und'} | Tipe: ${track.type}`);
+                        
+                        // Jika formatnya ASS, siapkan headernya
+                        if (track.type === 'ass') {
+                            assTracks[track.number] = track.header + '\r\n[Events]\r\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\r\n';
+                        }
+                    });
+                });
+
+                // EVENT 2: Saat teks dialog subtitle terbaca 
+                parser.on('subtitle', (subtitle, trackNumber) => {
+                    if (assTracks[trackNumber]) {
+                        // Tambahkan baris dialog ke track ASS yang bersangkutan
+                        // text dari event ini adalah "Dialogue: 0,00:00:01.00,00:00:04.00,Default,,0,0,0,,Teks Anime"
+                        assTracks[trackNumber] += subtitle.text + '\r\n';
+                    }
+                });
+
+                // EVENT 3: Saat Attachment Font (.ttf / .otf) ditemukan
+                parser.on('file', (attachment) => {
+                    log(`Menemukan Font: ${attachment.filename}`);
+                    // Masukkan font langsung ke dalam folder ZIP
+                    zip.folder("Fonts").file(attachment.filename, attachment.data);
+                });
+
+                // --- PROSES MEMBACA FILE ---
+                // Kita gunakan Web Streams API agar browser membaca file sepotong demi sepotong (Chunking)
+                // Ini mencegah RAM penuh!
+                const stream = file.stream(); 
+                const reader = stream.getReader();
+
+                try {
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        
+                        // Masukkan chunk data (Uint8Array) ke dalam parser
+                        parser.write(value); 
+                    }
+                    parser.end();
+
+                    // File selesai dibaca. Masukkan hasil ASS ke dalam ZIP
+                    for (const [trackNo, content] of Object.entries(assTracks)) {
+                        const fileName = `${file.name.replace('.mkv', '')}_track${trackNo}.ass`;
+                        zip.file(fileName, content);
+                        log(`✅ Berhasil mengekstrak subtitle: ${fileName}`);
+                    }
+                    resolve();
+
+                } catch (error) {
+                    log(`❌ Error membaca file: ${error.message}`);
+                    reject(error);
+                }
+            });
+        }
+    </script>
+</body>
+</html>
